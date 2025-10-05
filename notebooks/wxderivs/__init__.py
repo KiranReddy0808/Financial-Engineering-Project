@@ -14,9 +14,16 @@ from scipy.interpolate import CubicSpline
 from scipy.optimize import minimize
 from scipy.special import ndtr, ndtri
 
-current_dir = os.getcwd()
+# Prefer the package location so imports from different working directories still
+# resolve resources correctly. Fall back to cwd when __file__ isn't available.
 load_dotenv()
-DIR_WORK = Path(current_dir+ "/wxderivs")
+try:
+    # __file__ is the path to this __init__.py file; parent is the wxderivs folder
+    DIR_WORK = Path(__file__).resolve().parent
+except NameError:
+    # interactive environments may not define __file__ (rare); fall back
+    current_dir = os.getcwd()
+    DIR_WORK = Path(current_dir) / "wxderivs"
 
 sys.path.append(os.path.join(DIR_WORK, "unibm"))
 
@@ -24,12 +31,12 @@ import unibm
 from unibm import benchmark
 
 dct_name_file = {}
-for idx, file in enumerate([*(DIR_WORK / "data").glob("*.csv")]):
-    station = file.stem.replace("_DAILY_CLIMATE_BEST_Jan14May24", "").strip()
-    print(idx, station)
-    dct_name_file[station] = file
-SET_EUROPE = {"ESSEN", "LONDON HEATHROW", "AMSTERDAM SCHIPHOL", "PARIS ORLY"}
-SET_ASIA = {"TOKYO"}
+for idx, file in enumerate([*(DIR_WORK / "../../data/raw/temperature").glob("*.csv")]):
+    print(idx, file)
+    filename = file.stem
+    dct_name_file[filename] = file
+SET_EUROPE = {"Essen", "London", "Amsterdam", "Paris"}
+SET_ASIA = {"Tokyo"}
 SET_USA = {_ for _ in dct_name_file if _ not in SET_EUROPE and _ not in SET_ASIA}
 len(SET_USA)
 # ! Nov to Mar, Dec to Feb
