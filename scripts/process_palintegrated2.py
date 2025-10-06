@@ -15,9 +15,11 @@ def process_file(fp: Path) -> dict:
         contents = pd.read_csv(file)
         # Convert Time Stamp to datetime for proper grouping
         contents['Time Stamp'] = pd.to_datetime(contents['Time Stamp'])
+        contents = contents[(contents['Name'] == 'N.Y.C.') | (contents['Name'] == 'LONGIL') | (contents['Name'] == 'N.Y.C._LONGIL')]
 
         # Group by Time Stamp and sum the 'Integrated Load' column
         contents = contents.groupby('Time Stamp', as_index=False).agg({'Integrated Load': 'sum'})
+
         date = contents['Time Stamp'].dt.date.iloc[0]
         avg_load = contents['Integrated Load'].mean()
         max_load = contents['Integrated Load'].max()
