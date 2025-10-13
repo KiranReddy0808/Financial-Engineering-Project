@@ -1,0 +1,29 @@
+column,first_seen_file,first_seen_date
+HourEnding,data/raw/miso/converted_csv/20090707_rf_al__Sheet1.csv,2009-07-06
+East MTLF (MWh),data/raw/miso/converted_csv/20090707_rf_al__Sheet1.csv,2009-07-06
+East ActualLoad (MWh),data/raw/miso/converted_csv/20090707_rf_al__Sheet1.csv,2009-07-06
+Central MTLF (MWh),data/raw/miso/converted_csv/20090707_rf_al__Sheet1.csv,2009-07-06
+Central ActualLoad (MWh),data/raw/miso/converted_csv/20090707_rf_al__Sheet1.csv,2009-07-06
+West MTLF (MWh),data/raw/miso/converted_csv/20090707_rf_al__Sheet1.csv,2009-07-06
+West ActualLoad (MWh),data/raw/miso/converted_csv/20090707_rf_al__Sheet1.csv,2009-07-06
+Midwest ISO MTLF (MWh),data/raw/miso/converted_csv/20090707_rf_al__Sheet1.csv,2009-07-06
+Midwest ISO ActualLoad (MWh),data/raw/miso/converted_csv/20090707_rf_al__Sheet1.csv,2009-07-06
+North MTLF (MWh),data/raw/miso/converted_csv/20131212_rf_al__Sheet1.csv,2013-12-11
+North ActualLoad (MWh),data/raw/miso/converted_csv/20131212_rf_al__Sheet1.csv,2013-12-11
+MISO ISO MTLF (MWh),data/raw/miso/converted_csv/20131212_rf_al__Sheet1.csv,2013-12-11
+MISO ActualLoad (MWh),data/raw/miso/converted_csv/20131212_rf_al__Sheet1.csv,2013-12-11
+MISO MTLF (MWh),data/raw/miso/converted_csv/20131213_rf_al__Sheet1.csv,2013-12-12
+South MTLF (MWh),data/raw/miso/converted_csv/20131220_rf_al__Sheet1.csv,2013-12-19
+South ActualLoad (MWh),data/raw/miso/converted_csv/20131220_rf_al__Sheet1.csv,2013-12-19
+LRZ1 MTLF (MWh),data/raw/miso/converted_csv/20230101_df_al__Sheet1.csv,2022-12-31
+LRZ1 ActualLoad (MWh),data/raw/miso/converted_csv/20230101_df_al__Sheet1.csv,2022-12-31
+LRZ2_7 MTLF (MWh),data/raw/miso/converted_csv/20230101_df_al__Sheet1.csv,2022-12-31
+LRZ2_7 ActualLoad (MWh),data/raw/miso/converted_csv/20230101_df_al__Sheet1.csv,2022-12-31
+LRZ3_5 MTLF (MWh),data/raw/miso/converted_csv/20230101_df_al__Sheet1.csv,2022-12-31
+LRZ3_5 ActualLoad (MWh),data/raw/miso/converted_csv/20230101_df_al__Sheet1.csv,2022-12-31
+LRZ4 MTLF (MWh),data/raw/miso/converted_csv/20230101_df_al__Sheet1.csv,2022-12-31
+LRZ4 ActualLoad (MWh),data/raw/miso/converted_csv/20230101_df_al__Sheet1.csv,2022-12-31
+LRZ6 MTLF (MWh),data/raw/miso/converted_csv/20230101_df_al__Sheet1.csv,2022-12-31
+LRZ6 ActualLoad (MWh),data/raw/miso/converted_csv/20230101_df_al__Sheet1.csv,2022-12-31
+LRZ8_9_10 MTLF (MWh),data/raw/miso/converted_csv/20230101_df_al__Sheet1.csv,2022-12-31
+LRZ8_9_10 ActualLoad (MWh),data/raw/miso/converted_csv/20230101_df_al__Sheet1.csv,2022-12-31

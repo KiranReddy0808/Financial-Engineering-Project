@@ -26,6 +26,7 @@ share/python-wheels/
 *.egg
 MANIFEST
 data/raw/palIntegrated/
+data/raw/miso/
 
 # PyInstaller
 #  Usually these files are written by a python script from a template
