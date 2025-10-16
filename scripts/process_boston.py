@@ -115,11 +115,13 @@ def compute_daily_summary(df: pd.DataFrame) -> pd.DataFrame:
     grouped = df.groupby('Date').agg(
         ActualLoad_pred_min=('DA_DEMD', 'min'),
         ActualLoad_pred_max=('DA_DEMD', 'max'),
-        ActualLoad_pred_avg=('DA_DEMD', 'mean'),
         ActualLoad_min=('DEMAND', 'min'),
         ActualLoad_max=('DEMAND', 'max'),
-        ActualLoad_avg=('DEMAND', 'mean'),
     ).reset_index()
+    
+    # Calculate avg as (min + max) / 2
+    grouped['ActualLoad_pred_avg'] = (grouped['ActualLoad_pred_min'] + grouped['ActualLoad_pred_max']) / 2
+    grouped['ActualLoad_avg'] = (grouped['ActualLoad_min'] + grouped['ActualLoad_max']) / 2
     
     # Format Date as YYYY-MM-DD
     grouped['Date'] = grouped['Date'].dt.date

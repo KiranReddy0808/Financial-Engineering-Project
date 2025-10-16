@@ -21,9 +21,9 @@ def process_file(fp: Path) -> dict:
         contents = contents.groupby('Time Stamp', as_index=False).agg({'Integrated Load': 'sum'})
 
         date = contents['Time Stamp'].dt.date.iloc[0]
-        avg_load = contents['Integrated Load'].mean()
         max_load = contents['Integrated Load'].max()
         min_load = contents['Integrated Load'].min()
+        avg_load = (min_load + max_load) / 2
         
         data = {
             'date': date,

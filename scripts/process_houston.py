@@ -61,7 +61,7 @@ def process_houston():
                 grouped_hou = hou_df.groupby('Date')[hour_cols].sum().reset_index()
                 grouped_hou['min_load'] = grouped_hou[hour_cols].min(axis=1)
                 grouped_hou['max_load'] = grouped_hou[hour_cols].max(axis=1)
-                grouped_hou['avg_load'] = grouped_hou[hour_cols].mean(axis=1)
+                grouped_hou['avg_load'] = (grouped_hou['min_load'] + grouped_hou['max_load']) / 2
                 summary_hou = pd.concat([summary_hou, grouped_hou[['Date','min_load','max_load','avg_load']]], ignore_index=True)
             # Dallas rows end with _NCENT
             dal_df = df[df['PType_WZ'].str.upper().str.endswith('_NCENT')]
@@ -69,7 +69,7 @@ def process_houston():
                 grouped_dal = dal_df.groupby('Date')[hour_cols].sum().reset_index()
                 grouped_dal['min_load'] = grouped_dal[hour_cols].min(axis=1)
                 grouped_dal['max_load'] = grouped_dal[hour_cols].max(axis=1)
-                grouped_dal['avg_load'] = grouped_dal[hour_cols].mean(axis=1)
+                grouped_dal['avg_load'] = (grouped_dal['min_load'] + grouped_dal['max_load']) / 2
                 summary_dal = pd.concat([summary_dal, grouped_dal[['Date','min_load','max_load','avg_load']]], ignore_index=True)
         else:
             logging.warning('No PType_WZ column in %s — cannot split Houston/Dallas', file.name)

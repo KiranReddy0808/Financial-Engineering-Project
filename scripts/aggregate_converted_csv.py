@@ -180,7 +180,7 @@ def process_file(file: Path):
         count_valid = int(series.notna().sum())
         min_v = series.min(skipna=True)
         max_v = series.max(skipna=True)
-        avg_v = series.mean(skipna=True)
+        avg_v = (min_v + max_v) / 2 if pd.notna(min_v) and pd.notna(max_v) else float('nan')
         if count_valid == 0:
             # nothing to record
             continue
