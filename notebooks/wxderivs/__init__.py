@@ -51,7 +51,7 @@ MONTH_HDD = {11, 12, 1, 2, 3}
 #
 # NUM_SIM = 1000
 NUM_SIM = 50021
-SET_TARGET_US_CITIES = {"NewYork", "Boston", "Houston", "Chicago", "Dallas", "Minneapolis"}
+SET_TARGET_US_CITIES = {"NewYork", "Boston", "Chicago", "Minneapolis"}
 
 def fit_mean_std(srs: pd.Series) -> dict:
     vec_x = np.arange(0, len(srs))

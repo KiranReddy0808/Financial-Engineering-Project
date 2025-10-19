@@ -39,9 +39,11 @@ def fit_seasonal_model(srs, n_harmonics=3):
     X[:, 1] = t  # Linear trend
     
     # Add harmonics
+    col_idx = 2
     for n in range(1, n_harmonics + 1):
-        X[:, 2 + 2*(n-1)] = np.sin(2 * np.pi * n * doy / 365.25)
-        X[:, 2 + 2*(n-1) + 1] = np.cos(2 * np.pi * n * doy / 365.25)
+        X[:, col_idx] = np.sin(2 * np.pi * n * doy / 365.25)
+        X[:, col_idx + 1] = np.cos(2 * np.pi * n * doy / 365.25)
+        col_idx += 2
     
     # Fit using least squares
     params = np.linalg.lstsq(X, y, rcond=None)[0]
@@ -80,20 +82,27 @@ def fit_seasonal_model(srs, n_harmonics=3):
     }
 
 
-def fit_seasonal_garch_model(srs, n_harmonics=3):
+def fit_seasonal_garch_model(srs, n_harmonics=3, ar_order=1, ma_order=1):
     """
     Fit a two-stage model:
-    1. Seasonal model (trend + harmonics) for the mean
-    2. GARCH(1,1) model for the volatility of residuals
+    1. SARIMAX: Seasonal harmonics + ARMA → handles seasonality AND autocorrelation
+    2. GARCH(1,1) on SARIMAX residuals → models time-varying volatility
+    
+    This combines seasonal decomposition and ARMA into one unified model, 
+    so residuals are simultaneously de-seasonalized and de-correlated.
     
     Args:
         srs: pandas Series with datetime index
         n_harmonics: number of harmonic terms to include (default: 3)
+        ar_order: AR order for ARMA model (default: 1)
+        ma_order: MA order for ARMA model (default: 1)
     
     Returns:
         dict with fitted mean, residuals, time-varying volatility, and diagnostics
     """
-    # Stage 1: Fit seasonal model
+    from statsmodels.tsa.statespace.sarimax import SARIMAX
+    
+    # Prepare data
     srs_clean = srs.dropna()
     
     # Time variables
@@ -101,23 +110,84 @@ def fit_seasonal_garch_model(srs, n_harmonics=3):
     doy = srs_clean.index.day_of_year.values
     y = srs_clean.values
     
-    # Build design matrix for mean
-    n_mean_params = 2 + 2 * n_harmonics
-    X = np.ones((len(srs_clean), n_mean_params))
-    X[:, 0] = 1  # Intercept
-    X[:, 1] = t  # Linear trend
+    # Build design matrix for seasonal exogenous variables
+    # These capture the seasonal pattern via harmonics
+    n_harmonic_params = 2 * n_harmonics
+    n_exog_params = n_harmonic_params + 1  # harmonics + trend
     
-    # Add harmonics
+    X_seasonal = np.zeros((len(srs_clean), n_exog_params))
+    col_idx = 0
+    
+    # Add trend
+    X_seasonal[:, col_idx] = t
+    col_idx += 1
+    
+    # Add harmonics: sin and cos terms for each harmonic
     for n in range(1, n_harmonics + 1):
-        X[:, 2 + 2*(n-1)] = np.sin(2 * np.pi * n * doy / 365.25)
-        X[:, 2 + 2*(n-1) + 1] = np.cos(2 * np.pi * n * doy / 365.25)
+        X_seasonal[:, col_idx] = np.sin(2 * np.pi * n * doy / 365.25)
+        X_seasonal[:, col_idx + 1] = np.cos(2 * np.pi * n * doy / 365.25)
+        col_idx += 2
     
-    # Fit mean model
-    mean_params = np.linalg.lstsq(X, y, rcond=None)[0]
-    y_pred = X @ mean_params
-    residuals = y - y_pred
+    # Convert to DataFrame for SARIMAX with meaningful column names
+    col_names = ['trend']
+    for n in range(1, n_harmonics + 1):
+        col_names.extend([f'sin_{n}', f'cos_{n}'])
     
-    # Stage 2: Fit GARCH(1,1) to residuals
+    X_seasonal_df = pd.DataFrame(X_seasonal, index=srs_clean.index, columns=col_names)
+    
+    # Stage 1: Fit SARIMAX (unified seasonal + ARMA model)
+    # The ARMA component handles autocorrelation WHILE accounting for seasonal patterns
+    # Result: residuals are both de-seasonalized AND de-correlated
+    try:
+        model = SARIMAX(
+            srs_clean,
+            exog=X_seasonal_df,
+            order=(ar_order, 0, ma_order),  # ARMA(p,0,q) - no differencing
+            seasonal_order=(0, 0, 0, 0),     # No seasonal ARIMA (we use harmonics as exog)
+            trend='c',                        # Include constant
+            enforce_stationarity=False,
+            enforce_invertibility=False
+        )
+        
+        armax_result = model.fit(disp=False, maxiter=200)
+        
+        # Get fitted values and residuals
+        # These residuals should now be white noise (no seasonality, no autocorrelation)
+        y_pred = armax_result.fittedvalues.values
+        residuals = armax_result.resid.values
+        
+        # Extract parameters for reporting
+        n_mean_params = len(armax_result.params)
+        
+        arma_params = {
+            'ar_coefs': armax_result.arparams if ar_order > 0 else np.array([]),
+            'ma_coefs': armax_result.maparams if ma_order > 0 else np.array([]),
+            'constant': armax_result.params[0],
+            'aic': armax_result.aic,
+            'bic': armax_result.bic,
+            'converged': armax_result.mle_retvals['converged']
+        }
+        
+    except Exception as e:
+        print(f"⚠️  SARIMAX fitting failed: {e}")
+        print("   Falling back to simple seasonal model...")
+        
+        # Fallback: Use simple seasonal model without ARMA
+        n_mean_params = 2 + 2 * n_harmonics
+        X = np.ones((len(srs_clean), n_mean_params))
+        X[:, 0] = 1  # Intercept
+        X[:, 1] = t  # Linear trend
+        
+        for n in range(1, n_harmonics + 1):
+            X[:, 2 + 2*(n-1)] = np.sin(2 * np.pi * n * doy / 365.25)
+            X[:, 2 + 2*(n-1) + 1] = np.cos(2 * np.pi * n * doy / 365.25)
+        
+        mean_params = np.linalg.lstsq(X, y, rcond=None)[0]
+        y_pred = X @ mean_params
+        residuals = y - y_pred
+        arma_params = None
+    
+    # Stage 3: Fit GARCH(1,1) to ARMAX residuals
     # GARCH model: σ²[t] = ω + α*ε²[t-1] + β*σ²[t-1]
     
     def garch_likelihood(params):
@@ -184,7 +254,7 @@ def fit_seasonal_garch_model(srs, n_harmonics=3):
     r_squared = 1 - np.var(residuals) / np.var(y)
     
     return {
-        'mean_params': mean_params,
+        'arma_params': arma_params,
         'garch_params': {'omega': omega, 'alpha': alpha, 'beta': beta},
         'y_pred': y_pred,
         'residuals': residuals,
@@ -194,6 +264,8 @@ def fit_seasonal_garch_model(srs, n_harmonics=3):
         't': t,
         'doy': doy,
         'n_harmonics': n_harmonics,
+        'ar_order': ar_order,
+        'ma_order': ma_order,
         'n_mean_params': n_mean_params,
         'n_garch_params': n_garch_params,
         'n_total_params': n_total_params,
@@ -203,17 +275,36 @@ def fit_seasonal_garch_model(srs, n_harmonics=3):
         'bic': bic,
         'r_squared': r_squared,
         'residual_std': np.std(residuals),
+        'seasonal': {
+            'y_pred': y_pred,
+            'residuals': residuals,
+            'r_squared': r_squared,
+            'aic': aic,
+            'bic': bic,
+            'residual_std': np.std(residuals)
+        },
+        'garch': {
+            'omega': omega,
+            'alpha': alpha,
+            'beta': beta,
+            'persistence': alpha + beta,
+            'volatility': fitted_volatility,
+            'aic': aic,
+            'bic': bic
+        }
     }
 
 
-def compare_models(region_name, srs, harmonics_list=[3, 6]):
+def compare_models(region_name, srs, harmonics_list=[3, 6], ar_order=1, ma_order=1):
     """
-    Compare seasonal models with different numbers of harmonics.
+    Compare seasonal ARMAX-GARCH models with different numbers of harmonics.
     
     Args:
         region_name: name of the region for display
         srs: pandas Series with datetime index
         harmonics_list: list of harmonic counts to test (default: [3, 6])
+        ar_order: AR order for ARMA model (default: 1)
+        ma_order: MA order for ARMA model (default: 1)
     
     Returns:
         pandas DataFrame with model comparison results
@@ -222,13 +313,15 @@ def compare_models(region_name, srs, harmonics_list=[3, 6]):
     
     for n_harmonics in harmonics_list:
         # Fit model
-        fit = fit_seasonal_garch_model(srs, n_harmonics=n_harmonics)
+        fit = fit_seasonal_garch_model(srs, n_harmonics=n_harmonics, ar_order=ar_order, ma_order=ma_order)
         
         # Store results
         results.append({
             'Region': region_name,
-            'Model': f'{n_harmonics}H + GARCH(1,1)',
+            'Model': f'{n_harmonics}H + ARMA({ar_order},{ma_order}) + GARCH(1,1)',
             'N_Harmonics': n_harmonics,
+            'AR_Order': ar_order,
+            'MA_Order': ma_order,
             'N_Params': fit['n_total_params'],
             'R²': fit['r_squared'],
             'Residual_Std': fit['residual_std'],
@@ -245,13 +338,15 @@ def compare_models(region_name, srs, harmonics_list=[3, 6]):
     return pd.DataFrame(results)
 
 
-def fit_all_regions(regions_dict, harmonics_list=[3, 6]):
+def fit_all_regions(regions_dict, harmonics_list=[3, 6], ar_order=1, ma_order=1):
     """
-    Fit seasonal + GARCH models to all regions and compare.
+    Fit seasonal ARMAX-GARCH models to all regions and compare.
     
     Args:
         regions_dict: dict of {region_name: pandas Series}
         harmonics_list: list of harmonic counts to test (default: [3, 6])
+        ar_order: AR order for ARMA model (default: 1)
+        ma_order: MA order for ARMA model (default: 1)
     
     Returns:
         pandas DataFrame with comparison results for all regions
@@ -259,7 +354,7 @@ def fit_all_regions(regions_dict, harmonics_list=[3, 6]):
     all_results = []
     
     for region_name, srs in regions_dict.items():
-        region_results = compare_models(region_name, srs, harmonics_list)
+        region_results = compare_models(region_name, srs, harmonics_list, ar_order, ma_order)
         all_results.append(region_results)
     
     return pd.concat(all_results, ignore_index=True)
