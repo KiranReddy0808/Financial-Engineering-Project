@@ -82,11 +82,11 @@ def fit_seasonal_model(srs, n_harmonics=3):
     }
 
 
-def fit_seasonal_garch_model(srs, n_harmonics=3, ar_order=1, ma_order=1):
+def fit_seasonal_garch_model(srs, n_harmonics=3, ar_order=1, ma_order=1, garch_p=1, garch_q=1):
     """
     Fit a two-stage model:
     1. SARIMAX: Seasonal harmonics + ARMA → handles seasonality AND autocorrelation
-    2. GARCH(1,1) on SARIMAX residuals → models time-varying volatility
+    2. GARCH(p,q) on SARIMAX residuals → models time-varying volatility
     
     This combines seasonal decomposition and ARMA into one unified model, 
     so residuals are simultaneously de-seasonalized and de-correlated.
@@ -96,6 +96,8 @@ def fit_seasonal_garch_model(srs, n_harmonics=3, ar_order=1, ma_order=1):
         n_harmonics: number of harmonic terms to include (default: 3)
         ar_order: AR order for ARMA model (default: 1)
         ma_order: MA order for ARMA model (default: 1)
+        garch_p: GARCH p order - number of lagged squared residuals (default: 1)
+        garch_q: GARCH q order - number of lagged conditional variances (default: 1)
     
     Returns:
         dict with fitted mean, residuals, time-varying volatility, and diagnostics
@@ -187,24 +189,37 @@ def fit_seasonal_garch_model(srs, n_harmonics=3, ar_order=1, ma_order=1):
         residuals = y - y_pred
         arma_params = None
     
-    # Stage 3: Fit GARCH(1,1) to ARMAX residuals
-    # GARCH model: σ²[t] = ω + α*ε²[t-1] + β*σ²[t-1]
+    # Stage 3: Fit GARCH(p,q) to ARMAX residuals
+    # GARCH model: σ²[t] = ω + Σ(αᵢ*ε²[t-i]) for i=1..p + Σ(βⱼ*σ²[t-j]) for j=1..q
     
     def garch_likelihood(params):
-        """Negative log-likelihood for GARCH(1,1)"""
-        omega, alpha, beta = params
+        """Negative log-likelihood for GARCH(p,q)"""
+        omega = params[0]
+        alphas = params[1:1+garch_p]
+        betas = params[1+garch_p:]
         
-        # Constraints: ω > 0, α ≥ 0, β ≥ 0, α + β < 1
-        if omega <= 0 or alpha < 0 or beta < 0 or alpha + beta >= 1:
+        # Constraints: ω > 0, αᵢ ≥ 0, βⱼ ≥ 0, Σα + Σβ < 1 (stationarity)
+        if omega <= 0 or np.any(alphas < 0) or np.any(betas < 0):
+            return 1e10
+        if np.sum(alphas) + np.sum(betas) >= 1:
             return 1e10
         
         n = len(residuals)
         variance = np.zeros(n)
-        variance[0] = np.var(residuals)
+        
+        # Initialize first max(p,q) variances with unconditional variance
+        max_lag = max(garch_p, garch_q)
+        variance[:max_lag] = np.var(residuals)
         
         # Compute variance recursion
-        for i in range(1, n):
-            variance[i] = omega + alpha * residuals[i-1]**2 + beta * variance[i-1]
+        for i in range(max_lag, n):
+            variance[i] = omega
+            # ARCH terms: Σ(αᵢ * ε²[t-i]) for i=1..p
+            for j in range(garch_p):
+                variance[i] += alphas[j] * residuals[i-1-j]**2
+            # GARCH terms: Σ(βⱼ * σ²[t-j]) for j=1..q
+            for j in range(garch_q):
+                variance[i] += betas[j] * variance[i-1-j]
         
         # Negative log-likelihood (assuming normal errors)
         log_likelihood = -0.5 * np.sum(np.log(2 * np.pi * variance) + residuals**2 / variance)
@@ -212,10 +227,11 @@ def fit_seasonal_garch_model(srs, n_harmonics=3, ar_order=1, ma_order=1):
         return -log_likelihood
     
     # Initial parameter guesses
-    initial_params = [0.1, 0.1, 0.8]  # [ω, α, β]
+    n_garch_params = 1 + garch_p + garch_q
+    initial_params = [0.1] + [0.1] * garch_p + [0.8/garch_q] * garch_q
     
-    # Bounds: ω > 0, 0 ≤ α, β ≤ 1, α + β < 1
-    bounds = [(1e-6, 1.0), (0, 0.99), (0, 0.99)]
+    # Bounds: ω > 0, 0 ≤ αᵢ, βⱼ < 1
+    bounds = [(1e-6, 1.0)] + [(0, 0.99)] * garch_p + [(0, 0.99)] * garch_q
     
     # Optimize
     result = minimize(
@@ -227,15 +243,21 @@ def fit_seasonal_garch_model(srs, n_harmonics=3, ar_order=1, ma_order=1):
     )
     
     # Extract fitted parameters
-    omega, alpha, beta = result.x
-    n_garch_params = 3
+    omega = result.x[0]
+    alphas = result.x[1:1+garch_p]
+    betas = result.x[1+garch_p:]
     
     # Compute fitted volatilities
     fitted_volatility = np.zeros(len(residuals))
-    fitted_volatility[0] = np.sqrt(np.var(residuals))
+    max_lag = max(garch_p, garch_q)
+    fitted_volatility[:max_lag] = np.sqrt(np.var(residuals))
     
-    for i in range(1, len(residuals)):
-        variance = omega + alpha * residuals[i-1]**2 + beta * fitted_volatility[i-1]**2
+    for i in range(max_lag, len(residuals)):
+        variance = omega
+        for j in range(garch_p):
+            variance += alphas[j] * residuals[i-1-j]**2
+        for j in range(garch_q):
+            variance += betas[j] * fitted_volatility[i-1-j]**2
         fitted_volatility[i] = np.sqrt(variance)
     
     # Calculate log-likelihood for full model
@@ -253,9 +275,21 @@ def fit_seasonal_garch_model(srs, n_harmonics=3, ar_order=1, ma_order=1):
     # Calculate R²
     r_squared = 1 - np.var(residuals) / np.var(y)
     
+    # Calculate persistence (sum of all ARCH and GARCH coefficients)
+    persistence = np.sum(alphas) + np.sum(betas)
+    
+    # Prepare GARCH parameter dict for output
+    garch_params_dict = {
+        'omega': omega,
+        'alphas': alphas.tolist() if isinstance(alphas, np.ndarray) else [alphas],
+        'betas': betas.tolist() if isinstance(betas, np.ndarray) else [betas],
+        'garch_p': garch_p,
+        'garch_q': garch_q,
+    }
+    
     return {
         'arma_params': arma_params,
-        'garch_params': {'omega': omega, 'alpha': alpha, 'beta': beta},
+        'garch_params': garch_params_dict,
         'y_pred': y_pred,
         'residuals': residuals,
         'volatility': fitted_volatility,
@@ -266,10 +300,12 @@ def fit_seasonal_garch_model(srs, n_harmonics=3, ar_order=1, ma_order=1):
         'n_harmonics': n_harmonics,
         'ar_order': ar_order,
         'ma_order': ma_order,
+        'garch_p': garch_p,
+        'garch_q': garch_q,
         'n_mean_params': n_mean_params,
         'n_garch_params': n_garch_params,
         'n_total_params': n_total_params,
-        'persistence': alpha + beta,
+        'persistence': persistence,
         'log_likelihood': log_likelihood,
         'aic': aic,
         'bic': bic,
@@ -285,9 +321,9 @@ def fit_seasonal_garch_model(srs, n_harmonics=3, ar_order=1, ma_order=1):
         },
         'garch': {
             'omega': omega,
-            'alpha': alpha,
-            'beta': beta,
-            'persistence': alpha + beta,
+            'alphas': alphas.tolist() if isinstance(alphas, np.ndarray) else [alphas],
+            'betas': betas.tolist() if isinstance(betas, np.ndarray) else [betas],
+            'persistence': persistence,
             'volatility': fitted_volatility,
             'aic': aic,
             'bic': bic
@@ -295,16 +331,19 @@ def fit_seasonal_garch_model(srs, n_harmonics=3, ar_order=1, ma_order=1):
     }
 
 
-def compare_models(region_name, srs, harmonics_list=[3, 6], ar_order=1, ma_order=1):
+def compare_models(region_name, srs, harmonics_list=[3, 6], ar_order_list=[1], ma_order_list=[1], 
+                   garch_p_list=[1], garch_q_list=[1]):
     """
-    Compare seasonal ARMAX-GARCH models with different numbers of harmonics.
+    Compare seasonal ARMAX-GARCH models with different specifications.
     
     Args:
         region_name: name of the region for display
         srs: pandas Series with datetime index
         harmonics_list: list of harmonic counts to test (default: [3, 6])
-        ar_order: AR order for ARMA model (default: 1)
-        ma_order: MA order for ARMA model (default: 1)
+        ar_order_list: list of AR orders for ARMA model (default: [1])
+        ma_order_list: list of MA orders for ARMA model (default: [1])
+        garch_p_list: list of GARCH p orders (ARCH terms, default: [1])
+        garch_q_list: list of GARCH q orders (GARCH terms, default: [1])
     
     Returns:
         pandas DataFrame with model comparison results
@@ -312,52 +351,96 @@ def compare_models(region_name, srs, harmonics_list=[3, 6], ar_order=1, ma_order
     results = []
     
     for n_harmonics in harmonics_list:
-        # Fit model
-        fit = fit_seasonal_garch_model(srs, n_harmonics=n_harmonics, ar_order=ar_order, ma_order=ma_order)
-        
-        # Store results
-        results.append({
-            'Region': region_name,
-            'Model': f'{n_harmonics}H + ARMA({ar_order},{ma_order}) + GARCH(1,1)',
-            'N_Harmonics': n_harmonics,
-            'AR_Order': ar_order,
-            'MA_Order': ma_order,
-            'N_Params': fit['n_total_params'],
-            'R²': fit['r_squared'],
-            'Residual_Std': fit['residual_std'],
-            'Log_Likelihood': fit['log_likelihood'],
-            'AIC': fit['aic'],
-            'BIC': fit['bic'],
-            'GARCH_ω': fit['garch_params']['omega'],
-            'GARCH_α': fit['garch_params']['alpha'],
-            'GARCH_β': fit['garch_params']['beta'],
-            'Persistence': fit['persistence'],
-            'Avg_Volatility': fit['volatility'].mean(),
-        })
+        for ar_order in ar_order_list:
+            for ma_order in ma_order_list:
+                for garch_p in garch_p_list:
+                    for garch_q in garch_q_list:
+                        # Fit model
+                        fit = fit_seasonal_garch_model(
+                            srs, 
+                            n_harmonics=n_harmonics, 
+                            ar_order=ar_order, 
+                            ma_order=ma_order,
+                            garch_p=garch_p,
+                            garch_q=garch_q
+                        )
+                        
+                        # Store results
+                        results.append({
+                            'Region': region_name,
+                            'Model': f'{n_harmonics}H + ARMA({ar_order},{ma_order}) + GARCH({garch_p},{garch_q})',
+                            'N_Harmonics': n_harmonics,
+                            'AR_Order': ar_order,
+                            'MA_Order': ma_order,
+                            'GARCH_p': garch_p,
+                            'GARCH_q': garch_q,
+                            'N_Params': fit['n_total_params'],
+                            'R²': fit['r_squared'],
+                            'Residual_Std': fit['residual_std'],
+                            'Log_Likelihood': fit['log_likelihood'],
+                            'AIC': fit['aic'],
+                            'BIC': fit['bic'],
+                            'GARCH_ω': fit['garch_params']['omega'],
+                            'GARCH_Σα': np.sum(fit['garch_params']['alphas']),
+                            'GARCH_Σβ': np.sum(fit['garch_params']['betas']),
+                            'Persistence': fit['persistence'],
+                            'Avg_Volatility': fit['volatility'].mean(),
+                        })
     
     return pd.DataFrame(results)
 
 
-def fit_all_regions(regions_dict, harmonics_list=[3, 6], ar_order=1, ma_order=1):
+def fit_all_regions(regions_dict, harmonics_list=[3, 6], ar_order_list=[1], ma_order_list=[1],
+                    garch_p_list=[1], garch_q_list=[1]):
     """
     Fit seasonal ARMAX-GARCH models to all regions and compare.
+    Runs comprehensive grid search over all specified parameter combinations.
     
     Args:
         regions_dict: dict of {region_name: pandas Series}
         harmonics_list: list of harmonic counts to test (default: [3, 6])
-        ar_order: AR order for ARMA model (default: 1)
-        ma_order: MA order for ARMA model (default: 1)
+        ar_order_list: list of AR orders for ARMA model (default: [1])
+        ma_order_list: list of MA orders for ARMA model (default: [1])
+        garch_p_list: list of GARCH p orders (ARCH terms, default: [1])
+        garch_q_list: list of GARCH q orders (GARCH terms, default: [1])
     
     Returns:
         pandas DataFrame with comparison results for all regions
     """
     all_results = []
     
-    for region_name, srs in regions_dict.items():
-        region_results = compare_models(region_name, srs, harmonics_list, ar_order, ma_order)
-        all_results.append(region_results)
+    total_combinations = (len(harmonics_list) * len(ar_order_list) * len(ma_order_list) * 
+                         len(garch_p_list) * len(garch_q_list))
     
-    return pd.concat(all_results, ignore_index=True)
+    print(f"\n{'='*80}")
+    print(f"COMPREHENSIVE MODEL COMPARISON")
+    print(f"{'='*80}")
+    print(f"Regions: {len(regions_dict)}")
+    print(f"Harmonics: {harmonics_list}")
+    print(f"ARMA orders: AR={ar_order_list}, MA={ma_order_list}")
+    print(f"GARCH orders: p={garch_p_list}, q={garch_q_list}")
+    print(f"Total models per region: {total_combinations}")
+    print(f"Total models to fit: {total_combinations * len(regions_dict)}")
+    print(f"{'='*80}\n")
+    
+    for region_name, srs in regions_dict.items():
+        print(f"Processing {region_name}...")
+        region_results = compare_models(
+            region_name, srs, harmonics_list, ar_order_list, ma_order_list,
+            garch_p_list, garch_q_list
+        )
+        all_results.append(region_results)
+        print(f"  ✓ Fitted {len(region_results)} models for {region_name}")
+    
+    combined_results = pd.concat(all_results, ignore_index=True)
+    
+    print(f"\n{'='*80}")
+    print(f"MODEL FITTING COMPLETE")
+    print(f"{'='*80}")
+    print(f"Total models fitted: {len(combined_results)}")
+    print(f"{'='*80}\n")
+    
+    return combined_results
 
 
 def plot_model_comparison(fit_3h, fit_6h, region_name, save_path=None):
@@ -881,3 +964,110 @@ def run_full_diagnostics(fit, region_name, save_dir=None):
     print("="*80 + "\n")
     
     return results
+
+
+def compare_garch_specifications(srs, region_name, n_harmonics=3, ar_order=1, ma_order=1, 
+                                   garch_specs=[(1,1), (1,2), (2,1), (2,2)], save_path=None):
+    """
+    Compare different GARCH(p,q) specifications for the same mean model.
+    
+    Args:
+        srs: pandas Series with datetime index
+        region_name: name of the region for display
+        n_harmonics: number of harmonic terms (default: 3)
+        ar_order: AR order for ARMA (default: 1)
+        ma_order: MA order for ARMA (default: 1)
+        garch_specs: list of (p,q) tuples to test (default: [(1,1), (1,2), (2,1), (2,2)])
+        save_path: optional path to save comparison table
+    
+    Returns:
+        pandas DataFrame with GARCH model comparison results
+    """
+    print(f"\n{'='*80}")
+    print(f"COMPARING GARCH SPECIFICATIONS FOR {region_name}")
+    print(f"Mean Model: {n_harmonics}H + ARMA({ar_order},{ma_order})")
+    print(f"{'='*80}\n")
+    
+    results = []
+    
+    for garch_p, garch_q in garch_specs:
+        print(f"Fitting GARCH({garch_p},{garch_q})...")
+        
+        try:
+            fit = fit_seasonal_garch_model(
+                srs, 
+                n_harmonics=n_harmonics, 
+                ar_order=ar_order, 
+                ma_order=ma_order,
+                garch_p=garch_p,
+                garch_q=garch_q
+            )
+            
+            # Test standardized residuals for remaining ARCH effects
+            std_residuals = fit['residuals'] / fit['volatility']
+            
+            # Ljung-Box test on standardized squared residuals
+            lb_test = acorr_ljungbox(std_residuals**2, lags=10, return_df=True)
+            lb_pvalue_mean = lb_test['lb_pvalue'].mean()
+            lb_significant = (lb_test['lb_pvalue'] < 0.05).sum()
+            
+            # ARCH LM test
+            lm_stat, lm_pvalue, _, _ = het_arch(std_residuals, nlags=5)
+            
+            results.append({
+                'GARCH_Spec': f'({garch_p},{garch_q})',
+                'p': garch_p,
+                'q': garch_q,
+                'N_Params': fit['n_total_params'],
+                'AIC': fit['aic'],
+                'BIC': fit['bic'],
+                'Log_Likelihood': fit['log_likelihood'],
+                'Persistence': fit['persistence'],
+                'Avg_Volatility': fit['volatility'].mean(),
+                'Volatility_Std': fit['volatility'].std(),
+                'LB_Test_PValue': lb_pvalue_mean,
+                'LB_Significant_Lags': lb_significant,
+                'ARCH_LM_PValue': lm_pvalue,
+                'Passes_ARCH_Test': lm_pvalue > 0.05,
+                'ω': fit['garch_params']['omega'],
+                'Σα': np.sum(fit['garch_params']['alphas']),
+                'Σβ': np.sum(fit['garch_params']['betas']),
+            })
+            
+        except Exception as e:
+            print(f"  ⚠️  Failed to fit GARCH({garch_p},{garch_q}): {e}")
+            continue
+    
+    comparison_df = pd.DataFrame(results)
+    
+    print(f"\n{'='*80}")
+    print("GARCH SPECIFICATION COMPARISON RESULTS")
+    print(f"{'='*80}")
+    print(comparison_df.to_string(index=False))
+    
+    # Identify best models
+    best_aic = comparison_df.loc[comparison_df['AIC'].idxmin()]
+    best_bic = comparison_df.loc[comparison_df['BIC'].idxmin()]
+    
+    print(f"\n{'='*80}")
+    print("BEST MODELS")
+    print(f"{'='*80}")
+    print(f"Best by AIC: GARCH{best_aic['GARCH_Spec']} (AIC={best_aic['AIC']:.2f})")
+    print(f"Best by BIC: GARCH{best_bic['GARCH_Spec']} (BIC={best_bic['BIC']:.2f})")
+    
+    # Check if models pass diagnostic tests
+    passing_models = comparison_df[comparison_df['Passes_ARCH_Test'] == True]
+    if len(passing_models) > 0:
+        print(f"\nModels passing ARCH LM test (p > 0.05):")
+        for _, row in passing_models.iterrows():
+            print(f"  - GARCH{row['GARCH_Spec']}: AIC={row['AIC']:.2f}, BIC={row['BIC']:.2f}")
+    else:
+        print("\n⚠️  No models fully pass ARCH LM test - residual volatility clustering remains")
+    
+    print(f"{'='*80}\n")
+    
+    if save_path:
+        comparison_df.to_csv(save_path, index=False)
+        print(f"✓ Results saved to {save_path}\n")
+    
+    return comparison_df
