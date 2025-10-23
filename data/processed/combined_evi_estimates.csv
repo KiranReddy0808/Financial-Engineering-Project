@@ -1,0 +1,9 @@
+Variable,Type,City,EVI_Upper_Tail,K_Upper,EVI_Lower_Tail,K_Lower,Upper_Tail_Type,Lower_Tail_Type
+Boston_Temp,Temperature,Boston,0.04124752895558456,164,-0.32149224993254194,164,Heavy,Light
+Boston_Load,Load,Boston,0.08006142018219226,164,-0.03344706744748806,164,Heavy,Light
+NewYork_Temp,Temperature,NewYork,0.03402316994724028,164,-0.24900273375590218,164,Heavy,Light
+NewYork_Load,Load,NewYork,0.06949995527309527,164,-0.03362430793534679,164,Heavy,Light
+Chicago_Temp,Temperature,Chicago,0.03280343570701115,164,,164,Heavy,Exponential
+Chicago_Load,Load,Chicago,0.03832390512416285,164,-0.0358332069525045,164,Heavy,Light
+Minneapolis_Temp,Temperature,Minneapolis,0.034661103976262056,164,,164,Heavy,Exponential
+Minneapolis_Load,Load,Minneapolis,0.03256497129984845,164,-0.032366218692898026,164,Heavy,Light
