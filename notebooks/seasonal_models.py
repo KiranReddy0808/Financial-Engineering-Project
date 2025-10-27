@@ -592,7 +592,7 @@ def plot_aic_bic_comparison(all_regions_comparison, regions_dict, save_path=None
 # DIAGNOSTIC AND ANALYSIS FUNCTIONS
 # ===========================================================================================
 
-def plot_fitted_model_and_residuals(fit, region_name, save_path=None):
+def plot_fitted_model_and_residuals(fit, region_name, save_path=None, temperature=False):
     """
     Visualize fitted model and residuals in a 3-panel plot.
     
@@ -610,7 +610,10 @@ def plot_fitted_model_and_residuals(fit, region_name, save_path=None):
     axes[0].scatter(fit['index'], fit['y'], s=1, alpha=0.5, color='blue', label='Observed')
     axes[0].plot(fit['index'], fit['y_pred'], color='red', lw=1.5, label='Fitted', alpha=0.8)
     axes[0].set_ylabel('Load (MWh)')
-    axes[0].set_title(f'{region_name} Electricity Load - Observed vs Fitted (Seasonal + Trend Model)')
+    if temperature:
+        axes[0].set_title(f'{region_name} Temperature - Observed vs Fitted (Seasonal + Trend + Temp Model)')
+    else:
+        axes[0].set_title(f'{region_name} Electricity Load - Observed vs Fitted (Seasonal + Trend Model)')
     axes[0].legend()
     axes[0].grid(True, alpha=0.3)
     
