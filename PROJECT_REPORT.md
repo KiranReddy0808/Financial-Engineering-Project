@@ -1170,26 +1170,29 @@ Positive residuals occur when actual load exceeds forecast → grid must supply 
 
 **Key Findings (Right Tail):**
 
-1. **All Cities Show Heavy Tails (ξ > 0.15)**:
-   - New York: ξ = 0.156 (moderate heavy tail)
-   - Boston: ξ = 0.183 (heavier tail than NYC)
-   - Chicago: ξ = 0.242 (very heavy tail)
-   - Minneapolis: ξ = 0.267 (heaviest tail, polar vortex effects)
+1. **All Cities Show Heavy Tails (ξ > 0.20)**:
+   - **Boston: ξ = 0.292** (HEAVIEST - maritime weather + behavioral shocks)
+   - **New York: ξ = 0.269** (very heavy - urban complexity)
+   - **Minneapolis: ξ = 0.230** (heavy - polar vortex spikes)
+   - **Chicago: ξ = 0.220** (heavy - industrial stability)
 
-2. **Urban Heat Island Effect**:
-   - New York lowest ξ despite largest city
-   - More predictable due to diversified load
-   - Boston higher ξ → maritime weather variability
+2. **Coastal Cities Show Heavier Tails**:
+   - Boston highest ξ despite smaller size
+   - Maritime weather variability amplifies forecast errors
+   - NYC close second due to urban heat island + grid complexity
+   - **Counterintuitive**: Coastal > Midwest (opposite of temperature pattern)
 
-3. **Midwest Extreme Events**:
-   - Chicago/Minneapolis highest ξ (0.24-0.27)
-   - Continental climate → temperature extremes
-   - Polar vortex → unbounded cold-driven load spikes
+3. **Midwest More Predictable**:
+   - Chicago/Minneapolis LOWER ξ than Boston/NYC
+   - Industrial load patterns more stable
+   - Temperature extremes well-captured by seasonal models
+   - **Implication**: Better forecast accuracy despite extreme weather
 
 4. **Forecast Risk Implications**:
-   - Minneapolis: P(error > 500 MW) = 0.8% (once every 125 days)
-   - Boston: P(error > 200 MW) = 1.2% (once every 83 days)
-   - Standard Gaussian: Underestimates by 15-40×
+   - Boston: P(error > 400 MW) ≈ 2.5% (once every 40 days)
+   - NYC: P(error > 1,000 MW) ≈ 1.8% (once every 55 days)
+   - Chicago: P(error > 2,500 MW) ≈ 1.2% (once every 83 days)
+   - **Gaussian underestimates by 10-30×** for extreme events
 
 **Left Tail Analysis (Negative Residuals = Overforecasts):**
 
@@ -1204,46 +1207,67 @@ Negative residuals occur when forecast exceeds actual load → overgeneration ri
 
 **Key Findings (Left Tail):**
 
-1. **Symmetry in Tail Behavior**:
-   - Left tail ξ ≈ right tail ξ (within 0.02-0.04)
-   - Both directions show heavy tails
-   - Forecast errors are bidirectional extreme events
+1. **Asymmetry Varies By City**:
+   - **Boston**: Right-biased (+0.010) → underforecasts slightly more extreme
+   - **New York**: Left-biased (+0.032) → **overforecasts MORE extreme!**
+   - **Chicago**: Right-biased (-0.031) → underforecasts more extreme
+   - **Minneapolis**: Left-biased (+0.029) → overforecasts more extreme
+   - **Pattern**: Coastal cities have heavier overforecast tails
 
-2. **Overforecast Risk Lower**:
-   - Left tail thresholds smaller in magnitude
-   - Fewer extreme overforecasts than underforecasts
-   - Grid operators conservative bias (safety margin)
+2. **NYC Paradox - Extreme Overforecasts**:
+   - Left tail ξ = 0.301 (HIGHEST across all cities/tails)
+   - Right tail ξ = 0.269
+   - **Interpretation**: Complex urban load + demand response programs create extreme low-load scenarios
+   - Holidays, mild weather, behavioral changes → massive overgeneration risk
 
-3. **Economic Asymmetry**:
-   - Underforecast (right tail) → emergency generation, price spikes
-   - Overforecast (left tail) → oversupply, negative prices
-   - Right tail more costly (capacity shortfall > surplus)
+3. **Economic Asymmetry Implications**:
+   - **Underforecast (right tail)**: Emergency generation, price spikes, reliability penalties
+   - **Overforecast (left tail)**: Oversupply, negative prices, curtailment costs
+   - **NYC/Minneapolis**: Overforecast risk ≥ underforecast risk (ξ_left > ξ_right)
+   - **Boston/Chicago**: Traditional pattern (underforecast heavier)
 
 **Median EVI Across All Methods:**
 
 *Table shows median of 8 estimation methods (robust to outliers)*
 
-| City | Right Tail Median ξ | Left Tail Median ξ | Asymmetry | Tail Heaviness |
-|------|---------------------|-------------------|-----------|----------------|
-| **Boston** | 0.183 | 0.192 | Symmetric | Moderate-Heavy |
-| **New York** | 0.156 | 0.168 | Symmetric | Moderate |
-| **Chicago** | 0.242 | 0.228 | Slight Right | Very Heavy |
-| **Minneapolis** | 0.267 | 0.251 | Slight Right | Extreme Heavy |
+| City | Right Tail Median ξ | Left Tail Median ξ | Asymmetry | Tail Heaviness | Dominant Risk |
+|------|---------------------|-------------------|-----------|----------------|---------------|
+| **Boston** | **0.292** | **0.282** | Right-biased | Very Heavy | Underforecast spikes |
+| **New York** | **0.269** | **0.301** | Left-biased | Very Heavy | Overforecast losses |
+| **Chicago** | **0.220** | **0.189** | Right-biased | Heavy | Underforecast spikes |
+| **Minneapolis** | **0.230** | **0.259** | Left-biased | Heavy | Overforecast losses |
 
 **Comparison: Load vs Temperature EVI:**
 
-| City | Load Residual ξ (Right) | Temperature ξ (Hot) | Load Residual ξ (Left) | Temperature ξ (Cold) |
-|------|------------------------|-------------------|----------------------|-------------------|
-| **Boston** | 0.183 | 0.227 | 0.192 | 0.183 |
-| **New York** | 0.156 | 0.273 | 0.168 | 0.156 |
-| **Chicago** | 0.242 | 0.192 | 0.228 | 0.242 |
-| **Minneapolis** | 0.267 | 0.214 | 0.251 | 0.267 |
+| City | Load Residual ξ (Right) | Temperature ξ (Hot) | Difference | Load Residual ξ (Left) | Temperature ξ (Cold) | Difference |
+|------|------------------------|-------------------|------------|----------------------|-------------------|------------|
+| **Boston** | **0.292** | 0.227 | **+0.065** | **0.282** | 0.183 | **+0.099** |
+| **New York** | **0.269** | 0.273 | **-0.004** | **0.301** | 0.156 | **+0.145** |
+| **Chicago** | **0.220** | 0.192 | **+0.028** | **0.189** | 0.242 | **-0.053** |
+| **Minneapolis** | **0.230** | 0.214 | **+0.016** | **0.259** | 0.267 | **-0.008** |
 
-**Observations:**
-- **Load residuals ≈ temperature extremes**: Similar tail indices
-- **Chicago/Minneapolis**: Load residuals heavier than temperature (other factors amplify extremes)
-- **Boston/NYC**: Temperature extremes heavier (maritime moderation on load)
-- **Conclusion**: Load forecast errors inherit temperature tail risk + additional behavioral/grid shocks
+**Key Observations:**
+
+1. **Load Residuals HEAVIER Than Temperature (Boston):**
+   - Right tail: +0.065 heavier (29% more extreme)
+   - Left tail: +0.099 heavier (54% more extreme)
+   - **Reason**: Coastal weather variability + behavioral shocks + renewable intermittency
+
+2. **NYC Comparable But Asymmetric:**
+   - Right tail: Nearly identical to temperature (urban heat island matches load spikes)
+   - Left tail: +0.145 heavier (93% more extreme overforecasts!)
+   - **Reason**: Diversified urban load + complex grid interactions
+
+3. **Midwest: Load Lighter Than Cold Extremes:**
+   - Chicago left: -0.053 (cold snaps more extreme than load forecast errors)
+   - Minneapolis: Nearly identical
+   - **Reason**: Temperature extremes well-modeled, load forecasts incorporate historical cold patterns
+
+4. **General Pattern:**
+   - **Boston/NYC**: Load residuals ≥ temperature (behavioral amplification)
+   - **Chicago/Minneapolis**: Load residuals ≤ temperature cold tail (industrial load stability)
+   
+**Conclusion**: Load forecast errors do NOT simply inherit temperature tail risk. Additional factors (demand response, renewable variability, behavioral shocks, grid events) create distinct tail distributions that are heavier in coastal cities and comparable in Midwest industrial regions.
 
 **Risk Management Applications:**
 
