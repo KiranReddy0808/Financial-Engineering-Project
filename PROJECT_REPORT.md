@@ -1161,12 +1161,12 @@ Following the same EVT methodology applied to temperature, we analyze **electric
 
 Positive residuals occur when actual load exceeds forecast → grid must supply more power than anticipated.
 
-| City | EVI (ξ) | Scale (σ, MW) | Threshold (MW) | n_exceed | 1st pct (MW) | 0.1th pct (MW) | Min Observed |
-|------|---------|-----------|----------------|----------|--------------|----------------|--------------|
-| **Boston** | **0.183** | 4.12 | 20.0 | 169 | 16.2 | 12.1 | 1.5 |
-| **New York** | **0.156** | 3.87 | 25.0 | 162 | 21.8 | 18.2 | 9.0 |
-| **Chicago** | **0.242** | 5.23 | 10.0 | 175 | 4.8 | -1.2 | -16.5 |
-| **Minneapolis** | **0.267** | 5.89 | -5.0 | 171 | -11.5 | -18.8 | -20.5 |
+| City | EVI (ξ) | Methods Range | Interpretation | Load Std (MW) | Tail Heaviness |
+|------|---------|---------------|----------------|---------------|----------------|
+| **Boston** | **0.292** | 0.098 - 1.348 | Heavy tail | 192.3 | Heaviest (coastal variability) |
+| **New York** | **0.269** | 0.099 - 1.425 | Heavy tail | 485.0 | Moderate-Heavy (urban diversification) |
+| **Chicago** | **0.220** | 0.009 - 1.760 | Moderate-Heavy | 1,197.6 | Moderate (industrial stability) |
+| **Minneapolis** | **0.230** | 0.003 - 1.405 | Moderate-Heavy | 506.9 | Moderate (polar vortex spikes) |
 
 **Key Findings (Right Tail):**
 
@@ -1195,12 +1195,12 @@ Positive residuals occur when actual load exceeds forecast → grid must supply 
 
 Negative residuals occur when forecast exceeds actual load → overgeneration risk, economic loss.
 
-| City | EVI (ξ) | Scale (σ, MW) | Threshold (MW) | n_exceed | 1st pct (MW) | 0.1th pct (MW) | Min Observed |
-|------|---------|-----------|----------------|----------|--------------|----------------|--------------|
-| **Boston** | **0.192** | 3.95 | -18.5 | 165 | -15.3 | -11.8 | 1.5 |
-| **New York** | **0.168** | 4.23 | -22.0 | 158 | -19.4 | -15.7 | 9.0 |
-| **Chicago** | **0.228** | 5.61 | -9.5 | 172 | -6.2 | -2.8 | -16.5 |
-| **Minneapolis** | **0.251** | 6.12 | -4.8 | 168 | -10.8 | -17.2 | -20.5 |
+| City | EVI (ξ) | Methods Range | Interpretation | Asymmetry vs Right | Economic Impact |
+|------|---------|---------------|----------------|-------------------|-----------------|
+| **Boston** | **0.282** | 0.005 - 1.147 | Heavy tail | Right-biased (+0.010) | Underforecasts more extreme |
+| **New York** | **0.301** | 0.007 - 1.325 | Heavy tail | Left-biased (+0.032) | Overforecasts more extreme |
+| **Chicago** | **0.189** | 0.085 - 1.702 | Moderate-Heavy | Right-biased (-0.031) | Underforecasts more extreme |
+| **Minneapolis** | **0.259** | 0.156 - 1.482 | Heavy tail | Left-biased (+0.029) | Overforecasts more extreme |
 
 **Key Findings (Left Tail):**
 
