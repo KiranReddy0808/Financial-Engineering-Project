@@ -1,14 +1,3 @@
-#!/usr/bin/env python3
-"""
-Convert MISO .xls/.xlsx reports into CSV or .xlsx files.
-
-Scans an input directory (default: data/raw/miso/daily) for .xls/.xlsx files and
-converts them into CSVs (one file per sheet) or into unified .xlsx workbooks.
-
-Usage:
-  python scripts/convert_miso_reports.py --format csv
-  python scripts/convert_miso_reports.py --in-dir data/raw/miso/daily --out-dir data/raw/miso/converted_xlsx --format xlsx
-"""
 from __future__ import annotations
 
 import argparse
@@ -27,12 +16,10 @@ DEFAULT_OUT_XLSX = Path("data/raw/miso/converted_xlsx")
 
 
 def sanitize_sheet_name(name: str) -> str:
-    # remove characters not allowed in filenames
     return re.sub(r"[^A-Za-z0-9_\- ]", "_", name)
 
 
 def convert_file_to_csv(in_path: Path, out_dir: Path, skip_existing: bool = True) -> int:
-    """Read all sheets and write each as separate CSV. Returns number written."""
     written = 0
     try:
         x = pd.read_excel(in_path, sheet_name=None)

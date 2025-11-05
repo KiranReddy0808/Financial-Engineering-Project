@@ -1,26 +1,10 @@
-#!/usr/bin/env python3
-"""
-Aggregate converted MISO CSVs into per-column daily summaries.
-
-This script supports two common layout variants observed in the converted CSVs:
- - Variant A (pre-2023): header is on line 6 (1-based), date on line 7, values on lines 8..31 (24 rows)
- - Variant B (2023+): header is on line 5 (1-based), date on line 6, values on lines 7..30 (24 rows)
-
-The detector will inspect the first few lines of each file and choose the header row
-that produces a parseable date on the following row. If neither candidate works, it
-falls back to a heuristic search within the first 12 rows.
-
-For each column (excluding metadata columns) it computes min/max/avg/count for the
-24 interval rows and appends a daily summary to data/processed/miso/columns/<col>.csv
-and records first-seen column names in data/processed/miso/column_names_log.csv.
-"""
 from __future__ import annotations
 
 import csv
 import logging
 import re
 from pathlib import Path
-from typing import Dict, List, Optional
+from typing import List, Optional
 
 import pandas as pd
 
@@ -37,7 +21,6 @@ METADATA_COLS = {"Time Stamp", "Time Zone", "Name", "PTID", "Integrated Load"}
 
 def sanitize(name: str) -> str:
     name = name.strip()
-    # replace problematic filename chars
     name = re.sub(r"[^A-Za-z0-9_.-]", "_", name)
     return name[:200]
 
@@ -47,13 +30,11 @@ def find_files(base: Path) -> List[Path]:
         return []
     return sorted(base.rglob("*.csv"))
 
-
 def parse_date_from_row(row: List[str]) -> Optional[pd.Timestamp]:
     for cell in row:
         if pd.isna(cell):
             continue
         s = str(cell).strip()
-        # try common date formats
         for fmt in ("%m/%d/%Y %H:%M:%S", "%m/%d/%Y", "%Y-%m-%d", "%Y%m%d"):
             try:
                 return pd.to_datetime(s, format=fmt)
@@ -68,33 +49,23 @@ def parse_date_from_row(row: List[str]) -> Optional[pd.Timestamp]:
 
 
 def _read_all_rows(file: Path) -> pd.DataFrame:
-    # read file without assuming a header so we can inspect arbitrary rows
     try:
         df = pd.read_csv(file, header=None, dtype=str, keep_default_na=False, low_memory=False)
         return df
     except Exception:
-        # last-resort: try with default settings
         return pd.read_csv(file, header=None, low_memory=False)
 
 
 def detect_layout_and_slice(df_all: pd.DataFrame, file: Path):
-    """Return tuple (header_idx, date_row_series, data24_df) or (None, None, None) on failure.
-
-    header_idx is 0-based index of the header row within df_all. data24_df will contain
-    24 rows (header_idx+2 .. header_idx+25 inclusive).
-    """
-    # candidate header rows in 0-based indexing: 4 (line5) and 5 (line6)
     candidates = [4, 5]
     max_row = df_all.shape[0]
     for idx in candidates:
         if idx + 25 <= max_row - 1:
-            # date row is next row
             date_row = df_all.iloc[idx + 1].tolist()
             parsed = parse_date_from_row(date_row)
             if parsed is not None and not pd.isna(parsed):
                 return idx, df_all.iloc[idx + 1], df_all.iloc[idx + 2: idx + 26].reset_index(drop=True)
 
-    # fallback: search within first 12 rows for a header that yields a parseable date next
     for idx in range(0, min(12, max_row - 2)):
         if idx + 25 <= max_row - 1:
             date_row = df_all.iloc[idx + 1].tolist()
@@ -102,7 +73,6 @@ def detect_layout_and_slice(df_all: pd.DataFrame, file: Path):
             if parsed is not None and not pd.isna(parsed):
                 return idx, df_all.iloc[idx + 1], df_all.iloc[idx + 2: idx + 26].reset_index(drop=True)
 
-    # give up
     return None, None, None
 
 
@@ -157,11 +127,10 @@ def process_file(file: Path):
     if header_idx is None:
         logging.warning('Could not detect layout for %s, skipping', file)
         return
-    # header row values
+    
     header = [str(x) for x in df_all.iloc[header_idx].tolist()]
     parsed_date = parse_date_from_row(date_row_series.tolist() if date_row_series is not None else [])
     if parsed_date is None:
-        # try to get date from filename (search for 8-digit date)
         m = re.search(r"(\d{8})", file.name)
         if m:
             try:
@@ -169,8 +138,6 @@ def process_file(file: Path):
             except Exception:
                 parsed_date = None
 
-    # data24 is already a DataFrame with the 24 rows; align columns
-    # ensure numeric conversion per-column
     ncols = min(len(header), data24.shape[1])
     for j in range(ncols):
         col_name = header[j]
@@ -182,7 +149,6 @@ def process_file(file: Path):
         max_v = series.max(skipna=True)
         avg_v = (min_v + max_v) / 2 if pd.notna(min_v) and pd.notna(max_v) else float('nan')
         if count_valid == 0:
-            # nothing to record
             continue
         append_column_summary(col_name, parsed_date, min_v, max_v, avg_v, count_valid, str(file))
         log_column_name(col_name, file, parsed_date)

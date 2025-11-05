@@ -1,15 +1,3 @@
-#!/usr/bin/env python3
-"""
-Extract NYISO palIntegrated zip files.
-
-Finds zip files (default: data/raw/palIntegrated/*.zip) and extracts any CSV files
-into an `extracted/<zip-stem>/` directory under the input folder (default
-`data/raw/palIntegrated/extracted`). Supports --skip-existing, --overwrite and --dry-run.
-
-Example:
-  python scripts/extract_palintegrated.py
-  python scripts/extract_palintegrated.py --in-dir data/raw/palIntegrated --overwrite
-"""
 from __future__ import annotations
 
 import argparse

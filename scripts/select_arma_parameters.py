@@ -1,16 +1,4 @@
-#!/usr/bin/env python3
-"""
-ARMA Parameter Selection Tool
-
-This script systematically tests different ARMA(p,q) parameter combinations
-for the SARIMAX model and provides recommendations based on AIC/BIC.
-
-Usage:
-    python select_arma_parameters.py --region Boston
-    python select_arma_parameters.py --region "New York" --max-p 3 --max-q 3
-"""
-
-import sys
+#!/usr/bin/env python3import sys
 import argparse
 import pandas as pd
 import numpy as np
@@ -50,18 +38,7 @@ def load_region_data(region_name):
 
 
 def test_arma_parameters(srs, max_p=3, max_q=3, n_harmonics=3):
-    """
-    Test different ARMA(p,q) parameter combinations.
-    
-    Args:
-        srs: pandas Series with datetime index
-        max_p: maximum AR order to test
-        max_q: maximum MA order to test
-        n_harmonics: number of seasonal harmonics
-    
-    Returns:
-        DataFrame with comparison results
-    """
+
     results = []
     
     print(f"\nTesting ARMA combinations (p=0..{max_p}, q=0..{max_q})")
@@ -242,6 +219,7 @@ def plot_comparison(results_df, region_name, save_path=None):
 
 
 def main():
+    
     parser = argparse.ArgumentParser(
         description='Test and select optimal ARMA parameters for SARIMAX model'
     )

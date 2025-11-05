@@ -1,15 +1,4 @@
-#!/usr/bin/env python3
-"""
-Process Boston NEMASSBOST sheets from yearly Excel files.
 
-Reads Date, Hour (1-24), DA_DEMD (forecast), and DEMAND (actual) columns.
-Computes min, max, avg per day for:
-  - DA_DEMD → saved as ActualLoad_pred (MWh)
-  - DEMAND → saved as ActualLoad (MWh)
-
-Input: data/raw/Boston/*.xls(x) files with NEMASSBOST sheet
-Output: data/processed/Boston/daily_summary.csv
-"""
 from __future__ import annotations
 
 import argparse

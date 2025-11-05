@@ -1,10 +1,3 @@
-"""
-Process temperature data for seasonal analysis.
-
-This script processes raw temperature data files to create clean datasets
-with average temperatures suitable for seasonal modeling.
-"""
-
 import pandas as pd
 import numpy as np
 from pathlib import Path

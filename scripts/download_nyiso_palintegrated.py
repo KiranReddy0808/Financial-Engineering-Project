@@ -1,14 +1,3 @@
-#!/usr/bin/env python3
-"""
-Download NYISO palIntegrated daily zip files for a date range.
-
-Usage examples:
-  python scripts/download_nyiso_palintegrated.py --start 2005-01-01 --end 2024-12-31
-  python scripts/download_nyiso_palintegrated.py --date 2015-07-01
-
-The files are saved to data/raw/palIntegrated by default and the script will
-skip files that already exist.
-"""
 from __future__ import annotations
 
 import argparse
@@ -137,8 +126,6 @@ def main() -> int:
 
     logging.info("Done. Success: %d, Failed: %d", success_count, fail_count)
     return 0 if fail_count == 0 else 3
-
-
 
 
 if __name__ == "__main__":

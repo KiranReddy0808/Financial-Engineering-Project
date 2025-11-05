@@ -1,21 +1,8 @@
-"""
-Download ETF prices for energy commodities used in electricity production
-Focus on: Natural Gas, Coal, Uranium, and Renewable Energy
-These are the primary fuel sources for power generation in the US
-"""
-
 import pandas as pd
 import yfinance as yf
 from datetime import datetime, timedelta
 import os
 
-# Define ETFs for electricity production fuel sources
-# US Electricity Generation Mix (2023):
-# - Natural Gas: ~43%
-# - Coal: ~16%
-# - Nuclear: ~18%
-# - Renewables: ~21%
-# - Other: ~2%
 
 # Select ONE representative ETF per category (6 total)
 ENERGY_ETFS = {
@@ -39,18 +26,6 @@ ENERGY_ETFS = {
 }
 
 def download_etf_data(ticker, start_date, end_date, description):
-    """
-    Download historical data for a single ETF
-    
-    Args:
-        ticker: ETF ticker symbol
-        start_date: Start date for data download
-        end_date: End date for data download
-        description: Description of the ETF
-    
-    Returns:
-        DataFrame with OHLCV data
-    """
     try:
         print(f"Downloading {ticker}: {description}...")
         
@@ -79,16 +54,7 @@ def download_etf_data(ticker, start_date, end_date, description):
 
 
 def download_all_energy_etfs(start_date='2014-01-01', end_date=None):
-    """
-    Download data for all energy ETFs
-    
-    Args:
-        start_date: Start date (default: 2014-01-01 to match other data)
-        end_date: End date (default: today)
-    
-    Returns:
-        Dictionary of DataFrames, one per ETF
-    """
+
     if end_date is None:
         end_date = datetime.now().strftime('%Y-%m-%d')
     
@@ -122,14 +88,6 @@ def download_all_energy_etfs(start_date='2014-01-01', end_date=None):
 
 
 def save_etf_data(all_data, combined_df, output_dir='../data/raw/energy_etfs'):
-    """
-    Save ETF data to CSV files
-    
-    Args:
-        all_data: Dictionary of individual ETF DataFrames
-        combined_df: Combined DataFrame with all ETFs
-        output_dir: Directory to save the data
-    """
     # Create output directory
     os.makedirs(output_dir, exist_ok=True)
     
@@ -189,62 +147,11 @@ def get_category_etfs():
     return categories
 
 
-def print_etf_info():
-    """
-    Print information about available ETFs by category
-    """
-    print("\n" + "=" * 80)
-    print("ELECTRICITY GENERATION FUEL SOURCE ETFs")
-    print("=" * 80)
-    print("\nUS Electricity Generation Mix (2023):")
-    print("  Natural Gas: ~43%")
-    print("  Nuclear: ~18%")
-    print("  Coal: ~16%")
-    print("  Renewables (Solar, Wind, Hydro): ~21%")
-    print("  Other: ~2%")
-    print("=" * 80)
-    
-    categories = get_category_etfs()
-    
-    for category, tickers in categories.items():
-        print(f"\n{category}:")
-        print("-" * 80)
-        for ticker in tickers:
-            description = ENERGY_ETFS.get(ticker, 'Unknown')
-            print(f"  {ticker:6s} - {description}")
-    
-    print("\n" + "=" * 80)
-    print("WHY THESE ETFs?")
-    print("=" * 80)
-    print("These ETFs track the primary fuels and companies involved in electricity")
-    print("generation. Their prices correlate with electricity production costs and")
-    print("can help predict electricity load patterns and wholesale power prices.")
-    print("=" * 80)
-
-
 if __name__ == "__main__":
-    # Print ETF information
-    print_etf_info()
     
-    # Download data
-    # Default: 2014-01-01 to present (to match your load data timeframe)
     all_data, combined_df = download_all_energy_etfs(
         start_date='2014-01-01',
         end_date=None  # Today
     )
     
-    # Save data
-    if all_data:
-        save_etf_data(all_data, combined_df)
-        
-        print("\n" + "=" * 80)
-        print("✅ DOWNLOAD COMPLETE!")
-        print("=" * 80)
-        print("\nData saved to: ../data/raw/energy_etfs/")
-        print("\nNext steps:")
-        print("  1. Check the etf_summary.csv for overview of all ETFs")
-        print("  2. Individual ETF data in separate CSV files")
-        print("  3. Combined data in all_energy_etfs.csv")
-        print("  4. Use this data to correlate with electricity load patterns")
-    else:
-        print("\n⚠️  No data was downloaded. Check your internet connection.")
+    save_etf_data(all_data, combined_df)

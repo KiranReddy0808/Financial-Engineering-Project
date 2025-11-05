@@ -1,19 +1,3 @@
-#!/usr/bin/env python3
-"""
-Download MISO load reports.
-
-Rules implemented:
-- For months between 2009-07 and 2022-12 (inclusive) download monthly zip files
-  with names like: 202212_rf_al_xls.zip
-- For dates between 2023-01-01 and 2024-12-31 (inclusive) download daily xls
-  files with names like: 20251006_df_al.xls (YYYYMMDD_df_al.xls)
-
-Files are saved under data/raw/miso/monthly and data/raw/miso/daily by default.
-
-Usage examples:
-  python scripts/download_miso_load.py
-  python scripts/download_miso_load.py --start 2009-07-01 --end 2024-12-31 --skip-existing
-"""
 from __future__ import annotations
 
 import argparse

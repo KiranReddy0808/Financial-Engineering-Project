@@ -1,25 +1,3 @@
-#!/usr/bin/env python3
-"""
-Process NYISO palIntegrated CSVs into per-day NY load files and a daily summary.
-
-For each raw CSV (e.g., data/raw/palIntegrated/20050101palIntegrated.csv) the
-script will:
- - read the file
- - parse timestamps and the "Integrated Load" column
- - sum the load across all regions for each timestamp (total NY load time series)
- - write a per-day timeseries CSV to data/processed/palIntegrated/<YYYYMMDD>_ny_total.csv
- - append a row to data/processed/palIntegrated/daily_summary.csv with mean, sum,
-   interval count and a simple sanity check
-
-Sanity checks performed:
- - Determine interval length (minutes) from timestamps and infer expected
-   intervals per day (24 for 60-min, 96 for 15-min). Check actual count matches.
- - Check for negative or missing load values.
-
-Usage:
-  python scripts/process_palintegrated.py
-
-"""
 from __future__ import annotations
 
 import logging

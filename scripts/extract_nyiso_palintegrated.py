@@ -1,19 +1,3 @@
-#!/usr/bin/env python3
-"""
-Extract NYISO palIntegrated zip files downloaded to a folder and place CSVs
-into an `extracted` folder under `data/raw`.
-
-By default this script extracts all CSVs directly into the output folder
-(`data/raw/extracted` by default) using a flat layout. To keep the original
-behavior of creating a per-zip subfolder (one folder per ZIP), pass
-`--subdir` on the command line.
-
-Usage examples:
-    python scripts/extract_nyiso_palintegrated.py            # flat extraction into data/raw/extracted
-    python scripts/extract_nyiso_palintegrated.py --subdir    # per-zip subfolders
-    python scripts/extract_nyiso_palintegrated.py --inplace   # extract CSVs into the same folder as the zip files
-    python scripts/extract_nyiso_palintegrated.py --dry-run
-"""
 from __future__ import annotations
 
 import argparse
